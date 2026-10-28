@@ -64,9 +64,11 @@ Run `python -m evals.run` after ingestion. It reports context recall@10 and MRR 
 1. Create a Qdrant Cloud cluster and copy its URL and API key.
 2. Push this repository to public GitHub.
 3. In Render, create a Blueprint from the repository. The included `render.yaml` defines the Docker web service and `/health` endpoint.
-4. Enter `QDRANT_URL` and `QDRANT_API_KEY` when Render prompts for secrets. `OPENAI_API_KEY` and `COHERE_API_KEY` are optional.
+4. Enter `QDRANT_URL`, `QDRANT_API_KEY`, `RELAY_ACCESS_USERNAME`, and a strong `RELAY_ACCESS_PASSWORD` when Render prompts for secrets. The last two protect the deployed UI and API with HTTP Basic authentication. `OPENAI_API_KEY` and `COHERE_API_KEY` are optional.
 5. Apply the Blueprint and use the generated `onrender.com` URL in your portfolio.
 
 The deployed demo automatically seeds its synthetic corpus when the collection is empty. It remains usable without external AI keys by switching to local deterministic retrieval and cited fallback answers. Never commit a populated `.env` file.
+
+The Qdrant endpoint and API key are server-only secrets: they are never exposed to the browser bundle. The public health endpoint remains unauthenticated for Render health checks; all other routes require the Relay credentials when `REQUIRE_ACCESS_AUTH=true`.
 
 For resume bullets, a portfolio description, and a two-minute interview demo script, see [docs/portfolio.md](docs/portfolio.md).

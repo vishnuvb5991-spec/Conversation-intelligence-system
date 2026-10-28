@@ -17,6 +17,9 @@ class Settings(BaseSettings):
     auto_seed_demo: bool = True
     rate_limit_per_minute: int = 20
     openai_timeout_seconds: float = 12.0
+    require_access_auth: bool = False
+    relay_access_username: str | None = None
+    relay_access_password: str | None = None
 
 
 settings = Settings()

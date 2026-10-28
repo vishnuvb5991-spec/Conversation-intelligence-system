@@ -14,6 +14,12 @@ services:
         value: "20"
       - key: OPENAI_TIMEOUT_SECONDS
         value: "12"
+      - key: REQUIRE_ACCESS_AUTH
+        value: "true"
+      - key: RELAY_ACCESS_USERNAME
+        sync: false
+      - key: RELAY_ACCESS_PASSWORD
+        sync: false
       - key: QDRANT_URL
         sync: false
       - key: QDRANT_API_KEY

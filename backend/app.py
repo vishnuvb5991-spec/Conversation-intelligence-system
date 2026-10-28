@@ -1,8 +1,10 @@
 from collections import defaultdict, deque
 from contextlib import asynccontextmanager
+import base64
+from binascii import Error as Base64Error
+from hmac import compare_digest
 from time import monotonic
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.staticfiles import StaticFiles
 from .answering import GroundedAnswerer
 from .repository import SearchRepository
@@ -22,6 +24,8 @@ startup_error: str | None = None
 async def lifespan(_: FastAPI):
     global startup_error
     try:
+        if settings.require_access_auth and not (settings.relay_access_username and settings.relay_access_password):
+            raise RuntimeError("Access authentication is enabled but credentials are missing")
         repository.ensure_collection()
         if settings.auto_seed_demo and repository.count() == 0:
             chunks = [chunk for document in SEED_DOCUMENTS for chunk in chunk_document(document, settings.chunk_size, settings.chunk_overlap)]
@@ -32,7 +36,34 @@ async def lifespan(_: FastAPI):
 
 
 app = FastAPI(title="Relay Enterprise Search", version="1.0.0", lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"], allow_methods=["*"], allow_headers=["*"])
+
+
+@app.middleware("http")
+async def protect_demo(request: Request, call_next):
+    if settings.require_access_auth and request.url.path != "/health":
+        authorization = request.headers.get("authorization", "")
+        valid_username = settings.relay_access_username or ""
+        valid_password = settings.relay_access_password or ""
+        supplied_username = supplied_password = ""
+        # Browsers send Basic authentication as base64. Decode it only after confirming the scheme.
+        if authorization.startswith("Basic "):
+            try:
+                supplied_username, _, supplied_password = base64.b64decode(authorization[6:], validate=True).decode("utf-8").partition(":")
+            except (Base64Error, UnicodeDecodeError):
+                supplied_username = supplied_password = ""
+        if not (compare_digest(supplied_username, valid_username) and compare_digest(supplied_password, valid_password)):
+            return Response(status_code=401, headers={"WWW-Authenticate": 'Basic realm="Relay"'})
+
+    response = await call_next(request)
+    response.headers.update({
+        "Cache-Control": "no-store",
+        "Content-Security-Policy": "default-src 'self'; connect-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'",
+        "Permissions-Policy": "camera=(), geolocation=(), microphone=()",
+        "Referrer-Policy": "no-referrer",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+    })
+    return response
 
 
 @app.get("/health")
