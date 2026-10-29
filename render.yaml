@@ -11,7 +11,7 @@ services:
       - key: MAX_AUDIO_MB
         value: "50"
       - key: DIARIZATION_ENABLED
-        value: "true"
+        value: "false"
       - key: REQUIRE_ACCESS_AUTH
         value: "true"
       - key: RELAY_ACCESS_USERNAME
@@ -19,8 +19,6 @@ services:
       - key: RELAY_ACCESS_PASSWORD
         sync: false
       - key: DEEPGRAM_API_KEY
-        sync: false
-      - key: HF_TOKEN
         sync: false
       - key: OPENAI_API_KEY
         sync: false

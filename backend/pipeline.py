@@ -130,7 +130,10 @@ def process_meeting(meeting_id: str, filename: str, audio: bytes, content_type: 
     warnings: list[str] = []
     diarization: list[tuple[float, float, str]] = []
     if settings.diarization_enabled and settings.hf_token:
-        diarization = _diarize(audio_path)
+        try:
+            diarization = _diarize(audio_path)
+        except Exception as error:
+            warnings.append(f"Speaker diarization could not run ({type(error).__name__}). Use the diarization image and verify HF model access.")
     else:
         warnings.append("Speaker labels are unavailable. Configure HF_TOKEN and accept the pyannote Community-1 model terms to enable diarization.")
 

@@ -92,7 +92,7 @@ Set `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `DEEPGRAM_API_KEY`, 
 
 ## Deploy on Render
 
-The Blueprint keeps the existing service name so the deployment URL can remain stable. Add `DEEPGRAM_API_KEY`, `HF_TOKEN`, `RELAY_ACCESS_USERNAME`, and `RELAY_ACCESS_PASSWORD` as Render secrets. Add `OPENAI_API_KEY` if you want structured records. The public repository contains the app code only, not keys or AMI data. The optional pyannote package/model is memory-heavy; for small free instances, run diarization locally or deploy a worker with sufficient memory.
+The Blueprint keeps the existing service name so the deployment URL can remain stable. Add `DEEPGRAM_API_KEY`, `RELAY_ACCESS_USERNAME`, and `RELAY_ACCESS_PASSWORD` as Render secrets. Add `OPENAI_API_KEY` if you want structured records. The free web image runs transcription and summary extraction; it leaves pyannote off. For full diarization, run the `app-diarization` Docker profile with `HF_TOKEN` and an instance with sufficient memory. The public repository contains code only, not keys or AMI data.
 
 ## Provider references
 
