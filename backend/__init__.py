@@ -1,1 +1,1 @@
-"""Enterprise search API."""
+"""Conversation intelligence API."""

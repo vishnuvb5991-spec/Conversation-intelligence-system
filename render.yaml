@@ -6,25 +6,21 @@ services:
     healthCheckPath: /health
     autoDeployTrigger: commit
     envVars:
-      - key: PUBLIC_DEMO
-        value: "true"
-      - key: AUTO_SEED_DEMO
-        value: "true"
       - key: RATE_LIMIT_PER_MINUTE
-        value: "20"
-      - key: OPENAI_TIMEOUT_SECONDS
-        value: "12"
+        value: "5"
+      - key: MAX_AUDIO_MB
+        value: "50"
+      - key: DIARIZATION_ENABLED
+        value: "true"
       - key: REQUIRE_ACCESS_AUTH
         value: "true"
       - key: RELAY_ACCESS_USERNAME
         sync: false
       - key: RELAY_ACCESS_PASSWORD
         sync: false
-      - key: QDRANT_URL
+      - key: DEEPGRAM_API_KEY
         sync: false
-      - key: QDRANT_API_KEY
+      - key: HF_TOKEN
         sync: false
       - key: OPENAI_API_KEY
-        sync: false
-      - key: COHERE_API_KEY
         sync: false

@@ -1,0 +1,3 @@
+-r requirements.txt
+jiwer>=3.0,<5
+pyannote.metrics>=3.2,<4

@@ -1,74 +1,104 @@
-# Relay — cited enterprise search
+# Converse — conversation intelligence
 
-**Recruiter links:** add your Render demo URL and public GitHub URL here after deployment.
+**Project brief:** turn recorded conversations into a speaker-attributed transcript and an evidence-grounded meeting record, then evaluate transcription, diarization, and summary quality.
 
-> Public-demo safety: every record in this repository is synthetic. No real company documents, credentials, or personal data are included.
+## What it does
 
-A company-scale retrieval-augmented answer system with a cited-answer UI. The architecture is designed around the project brief: document ingestion, chunking, OpenAI embeddings, Qdrant dense + sparse hybrid retrieval, optional Cohere reranking, citation-enforced answers, and retrieval evaluation.
-
-## What this demonstrates
-
-- Dense + sparse hybrid retrieval in Qdrant, fused with reciprocal-rank fusion.
-- Grounded answers that receive retrieved evidence only and display the supporting citations.
-- Optional OpenAI and Cohere provider enhancements with an offline deterministic fallback.
-- Public-demo safeguards: synthetic data, automatic corpus seeding, request limits, timeout handling, and health checks.
-- Retrieval measurement using context recall@10 and MRR.
+- Upload WAV, MP3, M4A, MP4, WebM, FLAC, or OGG recordings through the FastAPI app.
+- Transcribe with Deepgram Nova-3, retaining word timing and confidence.
+- Align transcript turns to pyannote Community-1 speaker segments when its optional local model and Hugging Face access are configured.
+- Extract a concise summary, explicit decisions, action items with owners/dates when stated, and open questions with an optional OpenAI model.
+- Run an optional LiveKit Agents room worker with Deepgram Nova-3, OpenAI, and Eleven v3 Conversational speech output.
+- Measure WER, DER, rubric-scored summary quality, and real-time first-token/first-audio timing.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-  A[Synthetic source records] --> B[Chunking]
-  B --> C[Dense embeddings]
-  B --> D[Sparse token vectors]
-  C --> E[Qdrant]
-  D --> E
-  Q[Recruiter query] --> E
-  E --> F[Hybrid retrieval]
-  F --> G[Optional rerank]
-  G --> H[Citation-enforced answer]
-  H --> I[FastAPI + Relay UI]
+  A[AMI audio or uploaded meeting] --> B[FastAPI ingestion]
+  B --> C[Deepgram Nova-3]
+  B --> D[pyannote Community-1]
+  C --> E[Word timestamps]
+  D --> F[Speaker intervals]
+  E --> G[Speaker-attributed turns]
+  F --> G
+  G --> H[OpenAI structured extraction]
+  H --> I[Summary, decisions, actions, open questions]
+  I --> J[Meeting dashboard + JSON export]
+  E --> K[WER]
+  F --> L[DER]
+  I --> M[Anchored LLM judge]
+  N[LiveKit Agents room worker] --> O[Realtime STT + LLM + Eleven v3 Conversational TTS]
+  O --> P[TTFT, TTFB, response timing]
+  Q[Optional Arize Phoenix] -. traces .-> N
 ```
 
-## Run it
+## Run locally
 
-1. Copy `.env.example` to `.env`. Add `OPENAI_API_KEY` for `text-embedding-3-large` and `COHERE_API_KEY` for reranking. Keys are optional for the fully local deterministic development mode.
-2. Start the vector database: `docker compose up -d qdrant`.
-3. Install API packages: `python -m pip install -r requirements.txt`.
-4. Index the included demo corpus: `python -m backend.ingest`.
-5. Start the API: `uvicorn backend.app:app --reload`.
-6. Start the UI: `npm run dev`. The Vite development server proxies `/api` to the API at port 8000.
+1. Copy `.env.example` to `.env` and add the provider keys you intend to use.
+2. Install the API: `python -m pip install -r requirements.txt`.
+3. Install the web dependencies: `npm ci`.
+4. Start the API: `uvicorn backend.app:app --reload`.
+5. In another terminal, start the dashboard: `npm run dev`.
+6. Open the Vite address, choose a meeting recording, and process it.
 
-For an EnterpriseRAG-Bench export, map its records to JSONL fields `id`, `source`, `title`, and one of `text`, `content`, or `body`, then run `python -m backend.ingest --input path/to/documents.jsonl`.
+The API starts without provider keys. Add `DEEPGRAM_API_KEY` to enable transcription. Add `HF_TOKEN` and accept the model terms on Hugging Face for pyannote Community-1 diarization. The default image stays small and omits the model's heavy runtime; build the high-memory batch image with `docker compose --profile diarization up --build app-diarization` (port 8001), or install `requirements-diarization.txt` in a suitable local environment. Add `OPENAI_API_KEY` to create the structured meeting record; without it, the app returns transcript sentences as a minimal summary and leaves decisions/actions empty.
 
-## API
+### Privacy and storage
 
-`POST /api/search`
+Uploaded audio is sent to Deepgram for transcription and written to a temporary local file for diarization, then the temporary file is removed after processing. If `OPENAI_API_KEY` is configured, the transcript and speaker turns are sent to OpenAI for structured extraction. Audio files are not stored as meeting records. Processed transcript records live in application memory and are lost when the service restarts. Keep secrets in environment variables; never commit `.env` or real meeting recordings.
+
+The app requires HTTP Basic credentials in Render because `REQUIRE_ACCESS_AUTH=true` is set in the Blueprint. This architecture does not use a database; processed meeting records are kept in a capped in-memory list for the demo and disappear after a service restart.
+
+## Batch API
+
+`POST /api/meetings` accepts multipart form data with one `audio` file and returns a structured record:
 
 ```json
-{"query":"What is the plan for the enterprise launch?","sources":["Slack","Confluence"],"limit":8}
+{
+  "title": "Weekly planning",
+  "duration_seconds": 1534.2,
+  "turns": [{"start": 1.2, "end": 3.8, "speaker": "SPEAKER_00", "text": "Let's review the launch plan."}],
+  "summary": ["The team agreed to..."],
+  "decisions": [{"decision": "Move the review to Thursday.", "evidence": "Let's move the review to Thursday."}],
+  "action_items": [{"task": "Share the draft", "owner": "Maya", "due_date": "Friday", "evidence": "Maya will share it Friday."}],
+  "open_questions": []
+}
 ```
 
-Responses return ranked source chunks, an answer, and an explicit citation array. The model prompt is restricted to retrieved chunks and requires numbered citations for each factual claim.
+Other routes: `GET /health`, `GET /api/meetings`, and `GET /api/meetings/{id}`.
 
-## Evaluation
+## AMI evaluation
 
-Run `python -m evals.run` after ingestion. It reports context recall@10 and MRR from the question set in `evals/questions.jsonl`. Add benchmark questions to that file to track retrieval decisions while you tune chunk size, vector parameters, retrieval limits, or reranking.
+Use the AMI Meeting Corpus as the real-recording benchmark; the dataset is not copied into this public repository. Prepare a JSONL manifest containing human transcript references and system hypotheses. Include RTTM file paths for human/system speaker turns to score DER, and reference/hypothesis meeting records to run the LLM judge.
 
-## Deployment
+Install evaluation dependencies with `python -m pip install -r requirements-evaluation.txt`, then run:
 
-`docker compose up --build` launches Qdrant and a production API/UI at `http://localhost:8000`. In production, place the API behind your identity provider and populate each document's ACL metadata before indexing; then add an ACL filter to every Qdrant query.
+```sh
+python -m evals.run path/to/ami-manifest.jsonl --judge --output eval-report.json
+```
 
-## Public deployment: Render + Qdrant Cloud
+WER and DER are averaged over the manifest rows that contain those annotations. `--judge` uses the fixed 1–5 anchor rubric for factuality, decision coverage, action-item quality, and completeness; it requires `OPENAI_API_KEY`. Keep the AMI audio, annotations, and any derived private material outside Git and follow the dataset's access terms.
 
-1. Create a Qdrant Cloud cluster and copy its URL and API key.
-2. Push this repository to public GitHub.
-3. In Render, create a Blueprint from the repository. The included `render.yaml` defines the Docker web service and `/health` endpoint.
-4. Enter `QDRANT_URL`, `QDRANT_API_KEY`, `RELAY_ACCESS_USERNAME`, and a strong `RELAY_ACCESS_PASSWORD` when Render prompts for secrets. The last two protect the deployed UI and API with HTTP Basic authentication. `OPENAI_API_KEY` and `COHERE_API_KEY` are optional.
-5. Apply the Blueprint and use the generated `onrender.com` URL in your portfolio.
+## Optional real-time path
 
-The deployed demo automatically seeds its synthetic corpus when the collection is empty. It remains usable without external AI keys by switching to local deterministic retrieval and cited fallback answers. Never commit a populated `.env` file.
+The `realtime/agent.py` worker joins a LiveKit room, uses Deepgram for streaming transcription and diarized speaker IDs, handles meeting recap requests with an LLM, and speaks through the ElevenLabs `eleven_v3_conversational` model. Its Docker image is separate from the small batch API image:
 
-The Qdrant endpoint and API key are server-only secrets: they are never exposed to the browser bundle. The public health endpoint remains unauthenticated for Render health checks; all other routes require the Relay credentials when `REQUIRE_ACCESS_AUTH=true`.
+```sh
+docker compose --profile realtime up --build
+```
 
-For resume bullets, a portfolio description, and a two-minute interview demo script, see [docs/portfolio.md](docs/portfolio.md).
+Set `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `DEEPGRAM_API_KEY`, `OPENAI_API_KEY`, `ELEVEN_API_KEY`, and `ELEVENLABS_VOICE_ID`. Room dispatch and client token issuance are managed in LiveKit Cloud. TTS provider timing reports first audio byte; LLM metrics report first token. Set `PHOENIX_COLLECTOR_ENDPOINT` to enable optional Phoenix tracing. Tracing may include prompts and transcript text, so use it only with an appropriately secured collector.
+
+## Deploy on Render
+
+The Blueprint keeps the existing service name so the deployment URL can remain stable. Add `DEEPGRAM_API_KEY`, `HF_TOKEN`, `RELAY_ACCESS_USERNAME`, and `RELAY_ACCESS_PASSWORD` as Render secrets. Add `OPENAI_API_KEY` if you want structured records. The public repository contains the app code only, not keys or AMI data. The optional pyannote package/model is memory-heavy; for small free instances, run diarization locally or deploy a worker with sufficient memory.
+
+## Provider references
+
+- [Deepgram pre-recorded transcription API](https://developers.deepgram.com/reference/speech-to-text/listen-pre-recorded)
+- [LiveKit AgentSession](https://docs.livekit.io/agents/logic/sessions/)
+- [LiveKit Deepgram STT](https://docs.livekit.io/agents/models/stt/deepgram/)
+- [LiveKit ElevenLabs TTS](https://docs.livekit.io/agents/models/tts/elevenlabs/)
+- [ElevenLabs v3 Text-to-Dialogue WebSocket](https://elevenlabs.io/docs/eleven-api/guides/how-to/websockets/tts-vs-ttd-websockets)
+- [Arize Phoenix tracing](https://arize.com/docs/phoenix/learn/tracing/how-tracing-works)

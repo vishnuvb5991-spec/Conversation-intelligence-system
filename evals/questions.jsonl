@@ -1,2 +1,0 @@
-{"id":"launch-date","question":"What is the planned enterprise launch date?","sources":["Confluence","Slack"],"expected_document_ids":["confluence-launch","slack-launch"]}
-{"id":"launch-blockers","question":"What must be finished before the enterprise announcement?","sources":["Jira","Slack"],"expected_document_ids":["jira-gtm","slack-launch"]}

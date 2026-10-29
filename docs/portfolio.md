@@ -1,36 +1,34 @@
-# Relay portfolio kit
+# Conversation intelligence portfolio kit
 
 ## Portfolio description
 
-**Relay — cited enterprise search** is a full-stack RAG demo built to show how a company-search system can answer employee questions with traceable source evidence. It ingests synthetic collaboration data, uses dense + sparse hybrid retrieval in Qdrant, optionally reranks results, and requires citations in every generated answer.
+**Converse — conversation intelligence** turns meeting recordings into speaker-attributed transcripts, concise summaries, decisions, and action items. The batch pipeline uses Deepgram Nova-3 and pyannote Community-1, with an optional LiveKit real-time voice agent and Eleven v3 Conversational speech.
 
-**Stack:** FastAPI, Qdrant, OpenAI embeddings, optional Cohere Rerank, Docker, Render, Vite.
+**Stack:** FastAPI, Deepgram, pyannote.audio, OpenAI, LiveKit Agents/Cloud, ElevenLabs, Docker, Render, Vite, Arize Phoenix.
 
-Add these after deployment:
-
-- Live demo: `https://<your-render-service>.onrender.com`
-- GitHub: `https://github.com/<your-user>/relay-enterprise-search`
+- Live demo: `https://relay-enterprise-search.onrender.com`
+- GitHub: `https://github.com/vishnuvb5991-spec/relay-enterprise-search`
 
 ## Resume bullets
 
-- Built Relay, a cited enterprise-search system that combines dense and sparse Qdrant retrieval, optional reranking, and source-grounded RAG answers across simulated Slack, Jira, Confluence, email, and Drive data.
-- Designed a recruiter-facing, Dockerized FastAPI/Vite demo with automatic corpus seeding, rate limiting, health checks, provider fallbacks, and safe synthetic data for public deployment.
-- Added retrieval evaluation with context recall@10 and MRR to measure the impact of chunking and retrieval decisions.
+- Built an audio-to-record pipeline that combines Deepgram Nova-3 word timing with pyannote Community-1 speaker segments to produce speaker-attributed meeting transcripts.
+- Generated evidence-linked summaries, decisions, open questions, and action items with owner/date extraction that avoids inventing details absent from the conversation.
+- Added WER, DER, an anchored LLM-judge rubric, and optional LiveKit timing metrics for first token, first audio, and response latency.
 
 ## Two-minute demo script
 
-1. Open Relay and point out the “Sample company data” label.
-2. Ask: “What is the plan for the enterprise launch?”
-3. Show the answer panel, then open source citations to explain that the response is grounded in retrieved passages.
-4. Change the source filter to Slack or Jira and repeat the question to demonstrate scoped retrieval.
-5. Open “About this demo” and explain the ingest → hybrid retrieval → rerank → cited answer path.
-6. Close with the evaluation approach: “I track context recall@10 and MRR so retrieval changes are measurable, not just subjective.”
+1. Upload a short meeting recording and explain that the audio file is temporary.
+2. Show the speaker-labeled, timestamped transcript.
+3. Walk through the summary and separate decisions from next actions.
+4. Show the transcript quote that supports an action item.
+5. Explain WER for transcription, DER for speaker attribution, and the anchored rubric for record quality.
+6. Describe the optional LiveKit worker and its first-token/first-audio timing metrics.
 
 ## Interview prompts
 
 | Question | Concise answer |
 | --- | --- |
-| Why hybrid retrieval? | Dense vectors capture intent; sparse retrieval preserves exact terms, identifiers, and product names. RRF avoids relying entirely on either signal. |
-| How do you prevent hallucinations? | The answer receives only retrieved passages, citations are required, and an uncited model output falls back to an extractive cited response. |
-| Why synthetic data? | It makes the demo public and safe while still showing the end-to-end architecture and retrieval behavior. |
-| What would change for production? | Add document-level ACL filters, SSO, audit logs, ingestion jobs, observability, and a larger benchmark/evaluation set. |
+| How do you prevent invented action items? | The extraction prompt requires short transcript evidence and uses null for owners or due dates that are not stated. |
+| How is diarization evaluated? | DER compares reference and hypothesis speaker-time annotations; WER separately measures transcript word errors. |
+| Why keep AMI recordings out of Git? | The corpus is real recorded speech with human annotations; evaluation data stays local and follows its access terms. |
+| What would change for production? | Add durable encrypted record storage, retention controls, consent/notice flows, tenant isolation, and monitored worker queues. |

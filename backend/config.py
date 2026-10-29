@@ -3,23 +3,18 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
+    deepgram_api_key: str | None = None
+    hf_token: str | None = None
     openai_api_key: str | None = None
-    cohere_api_key: str | None = None
-    qdrant_url: str = "http://localhost:6333"
-    qdrant_api_key: str | None = None
-    qdrant_collection: str = "enterprise_documents"
-    embedding_model: str = "text-embedding-3-large"
-    answer_model: str = "gpt-4.1-mini"
-    chunk_size: int = 900
-    chunk_overlap: int = 120
-    dense_dimensions: int = 3072
-    public_demo: bool = True
-    auto_seed_demo: bool = True
-    rate_limit_per_minute: int = 20
-    openai_timeout_seconds: float = 12.0
+    openai_summary_model: str = "gpt-4.1-mini"
     require_access_auth: bool = False
     relay_access_username: str | None = None
     relay_access_password: str | None = None
+    max_audio_mb: int = 50
+    rate_limit_per_minute: int = 5
+    diarization_enabled: bool = True
+    diarization_model: str = "pyannote/speaker-diarization-community-1"
 
 
 settings = Settings()

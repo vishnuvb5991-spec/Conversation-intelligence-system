@@ -1,55 +1,37 @@
-from datetime import datetime
 from pydantic import BaseModel, Field
 
 
-class Document(BaseModel):
-    id: str
-    source: str
-    title: str
+class TranscriptTurn(BaseModel):
+    start: float
+    end: float
+    speaker: str | None = None
     text: str
-    author: str | None = None
-    url: str | None = None
-    created_at: datetime | None = None
-    metadata: dict = Field(default_factory=dict)
+    confidence: float | None = None
 
 
-class Chunk(BaseModel):
+class ActionItem(BaseModel):
+    task: str
+    owner: str | None = None
+    due_date: str | None = None
+    evidence: str | None = None
+
+
+class Decision(BaseModel):
+    decision: str
+    evidence: str | None = None
+
+
+class MeetingRecord(BaseModel):
     id: str
-    document_id: str
-    source: str
     title: str
-    text: str
-    author: str | None = None
-    url: str | None = None
-    chunk_index: int
-    metadata: dict = Field(default_factory=dict)
-
-
-class SearchRequest(BaseModel):
-    query: str = Field(min_length=2, max_length=1000)
-    sources: list[str] = Field(default_factory=list)
-    limit: int = Field(default=8, ge=1, le=20)
-
-
-class Citation(BaseModel):
-    id: str
-    source: str
-    title: str
-    excerpt: str
-    url: str | None = None
-
-
-class SearchResult(Citation):
-    score: float
-    document_id: str
-    author: str | None = None
-    chunk_index: int
-
-
-class AnswerResponse(BaseModel):
-    answer: str
-    citations: list[Citation]
-    results: list[SearchResult]
-    grounded: bool
-    mode: str
-    notice: str | None = None
+    created_at: str
+    duration_seconds: float
+    language: str | None = None
+    transcript: str
+    turns: list[TranscriptTurn] = Field(default_factory=list)
+    summary: list[str] = Field(default_factory=list)
+    decisions: list[Decision] = Field(default_factory=list)
+    action_items: list[ActionItem] = Field(default_factory=list)
+    open_questions: list[str] = Field(default_factory=list)
+    providers: dict[str, str] = Field(default_factory=dict)
+    warnings: list[str] = Field(default_factory=list)
