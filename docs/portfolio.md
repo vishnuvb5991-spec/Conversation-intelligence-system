@@ -6,7 +6,7 @@
 
 **Stack:** FastAPI, Deepgram, pyannote.audio, OpenAI, LiveKit Agents/Cloud, ElevenLabs, Docker, Render, Vite, Arize Phoenix.
 
-- Live demo: `https://relay-enterprise-search.onrender.com`
+- Live demo: [Conversation intelligence](https://relay-enterprise-search.onrender.com)
 - GitHub: `https://github.com/vishnuvb5991-spec/relay-enterprise-search`
 
 ## Resume bullets
